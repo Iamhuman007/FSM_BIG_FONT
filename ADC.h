@@ -6,8 +6,9 @@
 
 # define vref 2.5
 # define sample_no 16
+# define opt_no 3
 
-extern volatile int display_volt;
+
 extern volatile int task_A , task_B; 
 
 

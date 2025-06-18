@@ -2,9 +2,12 @@
 
 
 #include <msp430.h>
-#include "i2c.h"  // Include the I2C header file
+#include <lib/i2c/i2c.h>
+#include <lib/oled/ssd1306.h>
+
 #include "input.h"
 #include "ADC.h"
+#include "intrinsics.h"
 #include "msp430g2553.h"
 #include "sys/cdefs.h"
 #include <signal.h>
@@ -37,13 +40,13 @@ uint8_t r=0;
 
 
 
-char exit[]={"EXIT"};
+
+const char* menu[]={"1  CH_100","2   CH_50","3   DISCH"};
 
 void Exit(){
    
                if(task_A){
-                OLED_display_setup(20, 127, 6, 6);
-                OLED_display_string(exit,1);
+                draw12x16Str(10,47,"EXIT", 0);
                 r++;
                 task_B=0;
                 task_A=0;
@@ -51,23 +54,37 @@ void Exit(){
                 }
                else if(task_B&&r){
                     task_B=0;
+                
                     r=0;
                     CURRENT_STATE=STATE_MAIN_MENU;
                     
                 }
 
 }
+void display_screen( int current){
+    // int i;
+    // for(i=0;i<opt_no;i++){
+    //     if(i==current){
+    //         draw5x7Str(20, 8*i+25,menu[i], 0);
+    //     }
+    //     else{
+    //         draw5x7Str(20, 8*i+25,menu[i], 1);
+    //     }
+    // }
+    draw12x16Str(0,35,"          ", 1);
+    draw5x7Str(120, 35, " ", 1);
+    draw12x16Str(0,46,"          ", 1);
+    draw5x7Str(120, 46, " ", 1);   
+    draw12x16Str(10,40, menu[current], 1);
+}
+
 
 
    
 
 void main(void) {
     
-    char IN_Charge[]={"CHARGING[TO[[100"};
-    char IN_Storage[]={"CHARGING[TO[50"};
-    char IN_3[]={"DISCHARGING[TO[50"};
     
-    char D2[]={"2D"};
     
    // Configure WDT in interval timer mode
     WDTCTL = WDTPW + WDTTMSEL + WDTCNTCL + WDTSSEL + WDTIS0 ;
@@ -77,6 +94,8 @@ void main(void) {
     DCOCTL = CALDCO_8MHZ;
 
     BCSCTL3 |= LFXT1S_2;  // ACLK = VLO (~12kHz)
+    UCB0BR0 = 20;           // set UCB0BR0 to 20, for fSCL to 400kHz i2c
+    UCB0BR1 = 0;            //      if needed. 800kHz might be fine too
 
     IFG1 &= ~WDTIFG;
     IE1 |= WDTIE;
@@ -112,14 +131,20 @@ void main(void) {
 
     __enable_interrupt();           // Enable global interrupts
 
-    char c[]="VOLTAGE:[";
+    char c[]="V:";
     
-    size_t Inv=0;
-    I2C_Init();
-    OLED_Init();
-    OLED_display_clear(0, 127, 0, 7);
-    OLED_display_setup(10, 127, 1, 1);
-    OLED_display_string(c, Inv);
+    // size_t Inv=0;
+    _delay_cycles(50000);
+    i2c_init();
+    ssd1306_init();
+    ssd1306_command(SSD1306_SETCONTRAST);                               // 0x81
+    ssd1306_command(0xFF);
+    ssd1306_command(SSD1306_DISPLAYON);
+    ssd1306_clearDisplay();
+    draw12x16Str(4,10,"__________", 1);
+    draw5x7Str(120, 18, "__", 1); 
+    draw5x7Str(120, 19, "__", 1);
+    draw12x16Str(50,1, c, 1);
     
 
     
@@ -131,7 +156,11 @@ void main(void) {
         switch(CURRENT_STATE){
             case STATE_MAIN_MENU:
                 if(PREVIOUS_STATE!=CURRENT_STATE){
-                    display_screen(current_option);
+                    draw12x16Str(0,35,"          ", 1);
+                    draw5x7Str(120, 35, " ", 1);
+                    draw12x16Str(0,46,"          ", 1);
+                    draw5x7Str(120, 46, " ", 1);                    
+                    draw12x16Str(10,40,"Press_Btn", 1);
                     PREVIOUS_STATE=CURRENT_STATE;
                     }
                 if(task_A){
@@ -150,12 +179,12 @@ void main(void) {
                 if(PREVIOUS_STATE!=CURRENT_STATE){
                     P3OUT&=~BIT3;    // BLUE LED  ON
                     P1OUT|=BIT4;// CHARGING ON
-                    
-                    OLED_display_clear(0, 127, 3, 7);
-                    OLED_display_setup(10, 127, 4, 4);
-                    OLED_display_string(IN_Charge,0);
-                    OLED_display_setup(20, 127, 6, 6);
-                    OLED_display_string(exit,0);
+                    draw12x16Str(0,33,"          ", 1);
+                    draw5x7Str(120, 33, " ", 1);
+                    draw12x16Str(0,46,"          ", 1);
+                    draw5x7Str(120, 46, " ", 1);    
+                    draw5x7Str(10, 33, "Charging to 100%", 1);
+                    draw12x16Str(10,47,"EXIT", 1);
                     PREVIOUS_STATE=CURRENT_STATE;
                 }
 
@@ -171,8 +200,7 @@ void main(void) {
                         P3OUT|=BIT3;  // BLUE LED OFF
                         //start timer 
                         TA1CTL|=MC_1;
-                        OLED_display_setup(110, 125, 1, 1);
-                        OLED_display_string(D2, 0);
+                        draw12x16Str(5,1,"2DY", 1);
                         CURRENT_STATE=STATE_MAIN_MENU;
 
                     }
@@ -183,12 +211,12 @@ void main(void) {
                 if(PREVIOUS_STATE!=CURRENT_STATE){
                     P3OUT&=~BIT3;    // BLUE LED  ON
                     P1OUT|=BIT4;// CHARGING ON
-                    
-                    OLED_display_clear(0, 127, 3, 7);
-                    OLED_display_setup(10, 127, 4, 4);
-                    OLED_display_string(IN_Storage,0);
-                    OLED_display_setup(20, 127, 6, 6);
-                    OLED_display_string(exit,0);
+                    draw12x16Str(0,33,"          ", 1);
+                    draw5x7Str(120, 33, " ", 1);
+                    draw12x16Str(0,46,"          ", 1);
+                    draw5x7Str(120, 46, " ", 1);                     
+                    draw5x7Str(10, 33, "Charging to 50%", 1);
+                    draw12x16Str(10,47,"EXIT", 1);
                     PREVIOUS_STATE=CURRENT_STATE;
                 }
 
@@ -213,12 +241,12 @@ void main(void) {
                 if(PREVIOUS_STATE!=CURRENT_STATE){
                     P3OUT&=~BIT0;    // RED LED  ON
                     P1OUT&=~BIT3;    // DISCHARING ON
-
-                    OLED_display_clear(0, 127, 3, 7);
-                    OLED_display_setup(10, 127, 4, 4);
-                    OLED_display_string(IN_3,0);
-                    OLED_display_setup(20, 127, 6, 6);
-                    OLED_display_string(exit,0);
+                    draw12x16Str(0,33,"          ", 1);
+                    draw5x7Str(120, 33, " ", 1);
+                    draw12x16Str(0,46,"          ", 1);
+                    draw5x7Str(120, 46, " ", 1);  
+                    draw5x7Str(5, 33, "Discharging to 50%", 1);
+                    draw12x16Str(10,47,"EXIT", 1);
                     PREVIOUS_STATE=CURRENT_STATE;
                 }
 
@@ -266,9 +294,9 @@ __interrupt void WDT_ISR(void) {
 // // Port 1 ISR (Button)
 #pragma vector=PORT1_VECTOR
 __interrupt void Port_1(void) {
-if(P1IES&BIT2){
-    // P1IES|=BIT2;    // high to low transistion
-    P1IES&=~BIT2;// low to high transition
+if(!(P1IES&BIT2)){
+    P1IES|=BIT2;    // high to low transistion
+    // P1IES&=~BIT2;// low to high transition
     
     TA0R=0;      // reset timer
     TA0CTL|=MC_1;// up mode
@@ -279,8 +307,8 @@ else if(!(P1IES&BIT2)){
       timer_count=TA0R;
       TA0CTL&= ~MC_3;   // stop timer
       
-    //   P1IES&=~BIT2;// low to high transition
-    P1IES|=BIT2;    // high to low transistion
+      P1IES&=~BIT2;// low to high transition
+    // P1IES|=BIT2;    // high to low transistion
 
       if(timer_count>=double_press){
         task_B=1;
@@ -302,7 +330,8 @@ __interrupt void timer1(void){
     wait_time=0;
     CURRENT_STATE=STATE_DISCHARGING_50;
     TA1CTL&=~MC_3;
-    OLED_display_clear(110, 127, 1, 1);
+    draw12x16Str(5,5,"   ", 1);
+                    
 
    }
    else{

@@ -29,21 +29,21 @@ void LEDinit(){
 
 void digital_init(){
       // configure p1.2 as digital input
-    // Set P1.2 as input with pull-up resistor and interrupt
-    P1DIR &= ~DIGITAL_IP;                 // Input
-    P1REN |= DIGITAL_IP;                  // Enable pull-up/down
-    P1OUT |= DIGITAL_IP;                  // Pull-up
-    P1IE  |= DIGITAL_IP;                  // Interrupt enable
-    P1IES |= DIGITAL_IP;                  // High-to-low edge
-    P1IFG &= ~DIGITAL_IP;                 // Clear flag
-
-    // // Set P1.2 as input with pull-down resistor and interrupt
+    // // Set P1.2 as input with pull-up resistor and interrupt
     // P1DIR &= ~DIGITAL_IP;                 // Input
     // P1REN |= DIGITAL_IP;                  // Enable pull-up/down
-    // P1OUT &=~DIGITAL_IP;                  // Pull-down
+    // P1OUT |= DIGITAL_IP;                  // Pull-up
     // P1IE  |= DIGITAL_IP;                  // Interrupt enable
-    // P1IES &=~DIGITAL_IP;                  // low-to-high edge
+    // P1IES |= DIGITAL_IP;                  // High-to-low edge
     // P1IFG &= ~DIGITAL_IP;                 // Clear flag
+
+    // // Set P1.2 as input with pull-down resistor and interrupt. THIS IS FOR RED BUTTON
+    P1DIR &= ~DIGITAL_IP;                 // Input
+    P1REN |= DIGITAL_IP;                  // Enable pull-up/down
+    P1OUT &=~DIGITAL_IP;                  // Pull-down
+    P1IE  |= DIGITAL_IP;                  // Interrupt enable
+    P1IES &=~DIGITAL_IP;                  // low-to-high edge
+    P1IFG &= ~DIGITAL_IP;                 // Clear flag
 
 }
 

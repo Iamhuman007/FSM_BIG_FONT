@@ -1,6 +1,8 @@
 #include "ADC.h"
 #include<msp430.h>
-#include "i2c.h"
+#include <lib/i2c/i2c.h>
+#include <lib/oled/ssd1306.h>
+
 
 // #include "intrinsics.h"
 #include "msp430g2553.h"
@@ -24,7 +26,7 @@ void int_to_chars(uint16_t number, char* n) {
 
     n[0] = '0' + hundreds;
     n[1] = '0' + tens;
-    n[2] = '\\';
+    n[2] = '.';
     n[3] = '0' + ones;
     n[4] = '\0'; // Null-terminate
    
@@ -63,7 +65,6 @@ void display_voltage(){
 
         
          converted(s);
-         OLED_display_setup(60, 90, 1, 1);
-         OLED_display_string(n, 0);// instead of inv i have written 0
+         draw12x16Str(74, 1, n, 1);
 }
 
