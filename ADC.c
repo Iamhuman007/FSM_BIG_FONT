@@ -69,7 +69,7 @@ void display_voltage(){
         //  draw5x7Str(120, 35, " ", 1);
         //  draw12x16Str(0,15,"          ", 1);
         //  draw12x16Str(4,10,"__________", 1);
-        //  draw12x16Str(50, 1,"V:", 1);
-         draw12x16Str(74, 1, n, 1);
+         draw12x16Str(5, 1,"V:", 1);
+         draw12x16Str(29, 1, n, 1);
 }
 

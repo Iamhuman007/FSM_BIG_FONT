@@ -119,15 +119,15 @@ void main(void) {
     digital_init();// conf pin 1.2 as input
     LEDinit();
 
-    // Timer: ACLK (~32.768kHz), up mode, stop for now// 
+  
     // TA0CCTL0 = CCIE;
     TA0CCR0 = 16384;                // 0.5 sec
     TA0CTL = TASSEL_1 | MC_0 | ID0;       // ACLK, stop mode
 
     // Timer: 1A
-    TA1CCTL0=CCIE;
-    TA1CCR0=12000-1;
-    TA1CTL=TASSEL1 |MC_0 |ID0;
+    TA1CCTL0= CCIE;
+    TA1CCR0= 12000-1;
+    TA1CTL= TASSEL1 | MC_0 | ID0;
 
     
     
@@ -136,8 +136,9 @@ void main(void) {
 
     char c[]="V:";
     
-    // size_t Inv=0;
+     
     _delay_cycles(50000);
+    //__low_power_mode_3();  //  i can use this instead of delay_cycle but should test it
     i2c_init();
     ssd1306_init();
     ssd1306_command(SSD1306_SETCONTRAST);                               // 0x81
@@ -153,21 +154,30 @@ void main(void) {
     
     while (1) {
       
-        display_voltage();
-        __low_power_mode_3();    
+        
+       
         switch(CURRENT_STATE){
-            case STATE_INTRO:// new case added depends on intro_count in wdt_ISR
+            case STATE_INTRO:// new case added depends on intro_count 
                 draw12x16Str(0,15,"Battstor", 1);
                 draw12x16Str(40,45,"PHPP", 1);
                 draw5x7Str(10, 35,"BY", 1);
+                if(intro_count==0){
+                    CURRENT_STATE=STATE_MAIN_MENU;
+                    ssd1306_clearDisplay();
+                    // i can first disable the input and enable after the intro is done
+                    
+                }
+                else
+                    intro_count--; 
+
                 break;
                 
             case STATE_MAIN_MENU:
                 if(PREVIOUS_STATE!=CURRENT_STATE){
-                    draw12x16Str(0,35,"          ", 1);
-                    draw5x7Str(120, 35, " ", 1);
-                    draw12x16Str(0,46,"          ", 1);
-                    draw5x7Str(120, 46, " ", 1); 
+                    // draw12x16Str(0,35,"          ", 1);
+                    // draw5x7Str(120, 35, " ", 1);
+                    // draw12x16Str(0,46,"          ", 1);
+                    // draw5x7Str(120, 46, " ", 1); 
                     if(r==2)                   
                     draw12x16Str(10,40,"Press_Btn", 1);
                     else
@@ -211,7 +221,7 @@ void main(void) {
                         P3OUT|=BIT3;  // BLUE LED OFF
                         //start timer 
                         TA1CTL|=MC_1;
-                        draw12x16Str(5,1,"2DY", 1);
+                        draw12x16Str(160,1,"2DY", 1);
                         CURRENT_STATE=STATE_MAIN_MENU;
 
                     }
@@ -273,10 +283,14 @@ void main(void) {
                     P3OUT|=BIT0;
                     CURRENT_STATE=STATE_MAIN_MENU;
                 }
-                break;             
+                break;   
+            // case STATE_POWER_0FF:  // for now we will leave this blank until unitended clicks are reduced
+            //     break;              
         
 
         }
+
+         __low_power_mode_3();    
     }
 
 
@@ -298,14 +312,10 @@ void main(void) {
 
 #pragma vector=WDT_VECTOR
 __interrupt void WDT_ISR(void) {
-        
-           if(intro_count==0){
-               CURRENT_STATE=STATE_MAIN_MENU;
-               intro_count=4;
-           }
-           else
-              intro_count--; 
-         __low_power_mode_off_on_exit();  // Wake main loop
+    if(intro_count==0)
+        display_voltage();
+           
+    __low_power_mode_off_on_exit();  // Wake main loop
 }
 
 // // Port 1 ISR (Button)
