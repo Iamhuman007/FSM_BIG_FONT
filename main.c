@@ -14,19 +14,21 @@
 #include <stdint.h>
 #include <stddef.h>
 
-// #define single_press 1000
-#define double_press 2400
+#define single_press 240// 20 ms
+#define double_press 4800// 400ms
 
 
 
 typedef enum{
+    STATE_INTRO,
     STATE_MAIN_MENU,
     STATE_CHARGING_100,
     STATE_CHARGING_50,
-    STATE_DISCHARGING_50
+    STATE_DISCHARGING_50,
+    STATE_POWER_0FF
 }state;
 
-state CURRENT_STATE=STATE_MAIN_MENU, PREVIOUS_STATE=STATE_DISCHARGING_50;
+state CURRENT_STATE=STATE_INTRO, PREVIOUS_STATE=STATE_DISCHARGING_50;
 
 
 
@@ -36,7 +38,8 @@ volatile int timer_count = 0;
 volatile int current_option=-1;
 volatile int task_A = 0, task_B = 0; 
 volatile long wait_time=50;
-uint8_t r=0;
+uint8_t r=2;
+uint8_t intro_count=4;// 5 sec intro will be displayed
 
 
 
@@ -141,10 +144,9 @@ void main(void) {
     ssd1306_command(0xFF);
     ssd1306_command(SSD1306_DISPLAYON);
     ssd1306_clearDisplay();
-    draw12x16Str(4,10,"__________", 1);
-    draw5x7Str(120, 18, "__", 1); 
-    draw5x7Str(120, 19, "__", 1);
-    draw12x16Str(50,1, c, 1);
+    // draw12x16Str(4,10,"__________", 1);
+    
+    // draw12x16Str(50,1, c, 1);
     
 
     
@@ -154,13 +156,22 @@ void main(void) {
         display_voltage();
         __low_power_mode_3();    
         switch(CURRENT_STATE){
+            case STATE_INTRO:// new case added depends on intro_count in wdt_ISR
+                draw12x16Str(0,15,"Battstor", 1);
+                draw12x16Str(40,45,"PHPP", 1);
+                draw5x7Str(10, 35,"BY", 1);
+                break;
+                
             case STATE_MAIN_MENU:
                 if(PREVIOUS_STATE!=CURRENT_STATE){
                     draw12x16Str(0,35,"          ", 1);
                     draw5x7Str(120, 35, " ", 1);
                     draw12x16Str(0,46,"          ", 1);
-                    draw5x7Str(120, 46, " ", 1);                    
+                    draw5x7Str(120, 46, " ", 1); 
+                    if(r==2)                   
                     draw12x16Str(10,40,"Press_Btn", 1);
+                    else
+                    ssd1306_clearDisplay();
                     PREVIOUS_STATE=CURRENT_STATE;
                     }
                 if(task_A){
@@ -287,7 +298,13 @@ void main(void) {
 
 #pragma vector=WDT_VECTOR
 __interrupt void WDT_ISR(void) {
-           
+        
+           if(intro_count==0){
+               CURRENT_STATE=STATE_MAIN_MENU;
+               intro_count=4;
+           }
+           else
+              intro_count--; 
          __low_power_mode_off_on_exit();  // Wake main loop
 }
 
@@ -303,7 +320,7 @@ if(!(P1IES&BIT2)){
     P1IFG&=~BIT2;// clearing flag
     
 }
-else if(!(P1IES&BIT2)){
+else if(P1IES&BIT2){
       timer_count=TA0R;
       TA0CTL&= ~MC_3;   // stop timer
       
@@ -313,9 +330,9 @@ else if(!(P1IES&BIT2)){
       if(timer_count>=double_press){
         task_B=1;
       }
-      else //if(timer_count<=single_press){
+      else if(timer_count>single_press){
         task_A=1;
-      //}
+      }
       P1IFG&=~BIT2;// clearing flag
       __low_power_mode_off_on_exit();  // Wake main loop
 }
@@ -327,7 +344,7 @@ else if(!(P1IES&BIT2)){
 __interrupt void timer1(void){
       
    if(wait_time==0){
-    wait_time=0;
+    wait_time=50;
     CURRENT_STATE=STATE_DISCHARGING_50;
     TA1CTL&=~MC_3;
     draw12x16Str(5,5,"   ", 1);
